@@ -325,10 +325,34 @@ func (s *Server) showConfig() string {
 			out.WriteString(rtx.SelectCommand(line.Context) + "\n")
 		}
 		context = line.Context
+		text := line.Text
 		if line.Context != "" {
-			out.WriteString(" ")
+			text = " " + text
 		}
-		out.WriteString(line.Text + "\n")
+		out.WriteString(wrap(text, s.consoleColumns()-1) + "\n")
 	}
 	return out.String()
+}
+
+// consoleColumns returns the console width in effect. The default is 80.
+func (s *Server) consoleColumns() int {
+	for _, line := range s.lines {
+		if value, ok := strings.CutPrefix(line.Text, "console columns "); ok {
+			if columns, err := strconv.Atoi(value); err == nil {
+				return columns
+			}
+		}
+	}
+	return 80
+}
+
+// wrap breaks text every width characters with no continuation marker, as a real router does.
+func wrap(text string, width int) string {
+	runes := []rune(text)
+	var parts []string
+	for len(runes) > width {
+		parts = append(parts, string(runes[:width]))
+		runes = runes[width:]
+	}
+	return strings.Join(append(parts, string(runes)), "\n")
 }
