@@ -36,6 +36,9 @@ var (
 	consoleRe     = regexp.MustCompile(`^console (lines|columns) `)
 )
 
+// consoleKeys are the settings changed temporarily while reading the configuration.
+var consoleKeys = []string{"console lines", "console columns"}
+
 // errorMarkers are the texts shown when a command fails. The language and encoding depend
 // on console character, so the list has ASCII, UTF-8, Shift_JIS and EUC-JP forms.
 var errorMarkers = []string{
@@ -295,21 +298,30 @@ func (s *Session) Become() error {
 	return nil
 }
 
-// ReadConfig reads the current configuration.
+// ReadConfig reads the current configuration as parsed lines.
+func (s *Session) ReadConfig() ([]rtx.Line, error) {
+	config, err := s.ShowConfig()
+	if err != nil {
+		return nil, err
+	}
+	return rtx.ParseShowConfig(config), nil
+}
+
+// ShowConfig returns the show config output as it would appear with the router's own console settings.
 //
 // It temporarily changes console lines and columns to stop paging and wrapping
 // (the same method as the official Ansible collection). The change shows up in show config,
 // so it is restored after reading and the result reports the original values.
-func (s *Session) ReadConfig() ([]rtx.Line, error) {
+func (s *Session) ShowConfig() (string, error) {
 	// Display output may contain the word for error (in a description, say), so it is not scanned for errors.
 	snapshot, err := s.run("show config | grep console")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	var original []rtx.Line
+	original := map[string]string{}
 	for _, line := range rtx.ParseShowConfig(snapshot) {
 		if consoleRe.MatchString(line.Text) {
-			original = append(original, line)
+			original[line.Key()] = line.Text
 		}
 	}
 
@@ -318,16 +330,32 @@ func (s *Session) ReadConfig() ([]rtx.Line, error) {
 		readErr = fmt.Errorf("restore console settings: %w", err)
 	}
 	if readErr != nil {
-		return nil, readErr
+		return "", readErr
 	}
+	return withOriginalConsole(config, original), nil
+}
 
-	lines := original
-	for _, line := range rtx.ParseShowConfig(config) {
-		if !consoleRe.MatchString(line.Text) {
+// withOriginalConsole replaces the temporary console lines in config with the original ones.
+func withOriginalConsole(config string, original map[string]string) string {
+	var lines []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(config, "\n") {
+		if !consoleRe.MatchString(line) {
 			lines = append(lines, line)
+			continue
+		}
+		key := rtx.Line{Text: line}.Key()
+		seen[key] = true
+		if text, ok := original[key]; ok {
+			lines = append(lines, text)
 		}
 	}
-	return lines, nil
+	for _, key := range consoleKeys {
+		if text, ok := original[key]; ok && !seen[key] {
+			lines = append(lines, text)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (s *Session) readWithoutPaging() (string, error) {
@@ -351,14 +379,10 @@ func (s *Session) readWithoutPaging() (string, error) {
 	return config, nil
 }
 
-func (s *Session) restoreConsole(original []rtx.Line) error {
-	values := map[string]string{}
-	for _, line := range original {
-		values[line.Key()] = line.Text
-	}
-	for _, key := range []string{"console lines", "console columns"} {
+func (s *Session) restoreConsole(original map[string]string) error {
+	for _, key := range consoleKeys {
 		command := "no " + key
-		if text, ok := values[key]; ok {
+		if text, ok := original[key]; ok {
 			command = text
 		}
 		if _, err := s.Exec(command); err != nil {
