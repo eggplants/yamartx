@@ -1,0 +1,45 @@
+version: 2
+
+builds:
+- main: ./cmd/yamartx
+  binary: yamartx
+  env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+    - android
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm64
+  ignore:
+    # android/amd64 requires cgo (external linking).
+    - goos: android
+      goarch: amd64
+
+dockers_v2:
+  - images:
+      - "ghcr.io/eggplants/yamartx"
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.licenses": "MIT"
+    annotations:
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.description": "Declarative configuration tool for Yamaha RTX routers"
+      "org.opencontainers.image.licenses": "MIT"
+
+checksum:
+  name_template: "checksums.txt"
+
+docker_digest:
+  name_template: "digests.txt"

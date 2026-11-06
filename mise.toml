@@ -1,0 +1,30 @@
+[tools]
+"aqua:azu/dockerfile-pin" = "latest" # [skip ci]
+claude = "latest" # [skip ci]
+go = "1.27"
+goreleaser = "latest"
+pinact = "latest" # [skip ci]
+
+[tasks.pre-commit]
+depends = ["ci"]
+
+[tasks.ci]
+depends = ["goreleaser", "vet", "test", "fmt"]
+
+[tasks.goreleaser]
+run = "goreleaser check"
+
+[tasks.vet]
+run = "go vet ./..."
+
+[tasks.test]
+run = "go test ./..."
+
+[tasks.build]
+run = "go build ./cmd/yamartx"
+
+[tasks.release]
+run = "goreleaser release --snapshot --clean"
+
+[tasks.fmt]
+run = "go fmt ./..."

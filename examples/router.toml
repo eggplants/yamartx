@@ -1,0 +1,180 @@
+# yamartx configuration. Anything the router has but this file lacks is removed on apply.
+# Passwords and SSH host keys are never managed: show config masks them.
+
+[connection]
+host = "192.168.100.1"
+user = "operator"
+
+[system]
+console_character = "ja.utf8"
+
+[system.statistics]
+traffic = "on"
+
+[user_attribute.anonymous]
+connection = ["serial", "telnet", "remote", "ssh", "sftp", "http"]
+gui_page = ["dashboard", "lan-map", "config"]
+login_timer = 300
+
+[user_attribute.operator]
+connection = ["ssh"]
+gui_page = ["dashboard", "lan-map", "config"]
+login_timer = 300
+
+[sshd]
+service = "on"
+host = "lan1"
+
+[telnetd]
+service = "off"
+host = "lan"
+
+[httpd]
+host = "lan1"
+
+[interface.lan1]
+ip_address = "192.168.100.1/24"
+ipv6_address = ["ra-prefix@lan2::1/64"]
+ipv6_rtadv_send = "1 o_flag=off"
+
+[interface.lan2]
+ngn_type = "ntt"
+description = "Smart"
+ipv6_dhcp_service = "client ir=on"
+
+[interface.lan2.ipv6_secure_filter]
+in = [101000, 101001, 101002, 101003]
+out = [101099]
+out_dynamic = [101080, 101081, 101082, 101083, 101084, 101085, 101098, 101099]
+
+[tunnel.1]
+encapsulation = "map-e"
+enable = true
+ip_mtu = 1460
+ip_nat_descriptor = "20000"
+
+[tunnel.1.ip_secure_filter]
+in = [400003, 400020, 400021, 400022, 400023, 400024, 400025, 400030, 400032]
+out = [400013, 400020, 400021, 400022, 400023, 400024, 400025, 400026, 400027, 400099]
+out_dynamic = [400080, 400081, 400082, 400083, 400084, 400085, 400098, 400099]
+
+[ip.route]
+default = "gateway tunnel 1"
+
+[ip.filter]
+400000 = { action = "reject", src = "10.0.0.0/8" }
+400001 = { action = "reject", src = "172.16.0.0/12" }
+400002 = { action = "reject", src = "192.168.0.0/16" }
+400003 = { action = "reject", src = "192.168.100.0/24" }
+400010 = { action = "reject", dst = "10.0.0.0/8" }
+400011 = { action = "reject", dst = "172.16.0.0/12" }
+400012 = { action = "reject", dst = "192.168.0.0/16" }
+400013 = { action = "reject", dst = "192.168.100.0/24" }
+400020 = { action = "reject", proto = "udp,tcp", src_port = "135" }
+400021 = { action = "reject", proto = "udp,tcp", dst_port = "135" }
+400022 = { action = "reject", proto = "udp,tcp", src_port = "netbios_ns-netbios_ssn" }
+400023 = { action = "reject", proto = "udp,tcp", dst_port = "netbios_ns-netbios_ssn" }
+400024 = { action = "reject", proto = "udp,tcp", src_port = "445" }
+400025 = { action = "reject", proto = "udp,tcp", dst_port = "445" }
+400026 = { action = "restrict", proto = "tcpfin", dst_port = "www,21,nntp" }
+400027 = { action = "restrict", proto = "tcprst", dst_port = "www,21,nntp" }
+400030 = { action = "pass", dst = "192.168.100.0/24", proto = "icmp" }
+400031 = { action = "pass", dst = "192.168.100.0/24", proto = "established" }
+400032 = { action = "pass", dst = "192.168.100.0/24", proto = "tcp", dst_port = "ident" }
+400033 = { action = "pass", dst = "192.168.100.0/24", proto = "tcp", src_port = "ftpdata" }
+400034 = { action = "pass", dst = "192.168.100.0/24", proto = "tcp,udp", dst_port = "domain" }
+400035 = { action = "pass", dst = "192.168.100.0/24", proto = "udp", src_port = "domain" }
+400036 = { action = "pass", dst = "192.168.100.0/24", proto = "udp", dst_port = "ntp" }
+400037 = { action = "pass", dst = "192.168.100.0/24", proto = "udp", src_port = "ntp" }
+400099 = { action = "pass" }
+500000 = { action = "restrict" }
+
+[ip.filter_dynamic]
+400080 = { proto = "ftp" }
+400081 = { proto = "domain" }
+400082 = { proto = "www" }
+400083 = { proto = "smtp" }
+400084 = { proto = "pop3" }
+400085 = { proto = "submission" }
+400098 = { proto = "tcp" }
+400099 = { proto = "udp" }
+
+[ipv6.filter]
+101000 = { action = "pass", proto = "icmp6" }
+101001 = { action = "pass", proto = "tcp", dst_port = "ident" }
+101002 = { action = "pass", proto = "udp", dst_port = "546" }
+101003 = { action = "pass", proto = "4" }
+101099 = { action = "pass" }
+
+[ipv6.filter_dynamic]
+101080 = { proto = "ftp" }
+101081 = { proto = "domain" }
+101082 = { proto = "www" }
+101083 = { proto = "smtp" }
+101084 = { proto = "pop3" }
+101085 = { proto = "submission" }
+101098 = { proto = "tcp" }
+101099 = { proto = "udp" }
+
+[ipv6.prefix]
+1 = "ra-prefix@lan2::/64"
+
+[nat.20000]
+type = "masquerade"
+address_outer = "map-e"
+
+[dhcp]
+service = "server"
+rfc2131_compliant = "except remain-silent"
+
+[dhcp.scope.1]
+range = "192.168.100.2-192.168.100.191/24"
+options = "dns=192.168.100.4,192.168.100.5"
+binds = [
+  { ip = "192.168.100.2", mac = "02:00:00:00:00:11" },
+  { ip = "192.168.100.3", mac = "02:00:00:00:00:12" },
+  { ip = "192.168.100.4", mac = "02:00:00:00:00:13" },
+  { ip = "192.168.100.5", mac = "02:00:00:00:00:14" },
+  { ip = "192.168.100.6", mac = "02:00:00:00:00:15" },
+  { ip = "192.168.100.7", mac = "02:00:00:00:00:16" },
+  { ip = "192.168.100.9", mac = "02:00:00:00:00:17" },
+  { ip = "192.168.100.17", mac = "02:00:00:00:00:18" },
+  { ip = "192.168.100.18", mac = "02:00:00:00:00:19" },
+  { ip = "192.168.100.23", mac = "02:00:00:00:00:1a" },
+]
+
+[dns]
+host = "lan1"
+service_fallback = "on"
+server_dhcp = "lan2"
+private_address_spoof = "on"
+static = [
+  { type = "a", name = "adguard.home.arpa", value = "192.168.100.4" },
+  { type = "a", name = "gr12.home.arpa", value = "192.168.100.7" },
+  { type = "ptr", name = "192.168.100.7", value = "gr12.home.arpa" },
+  { type = "a", name = "grafana.home.arpa", value = "192.168.100.4" },
+  { type = "a", name = "gs110.home.arpa", value = "192.168.100.2" },
+  { type = "ptr", name = "192.168.100.2", value = "gs110.home.arpa" },
+  { type = "a", name = "gs308ep.home.arpa", value = "192.168.100.3" },
+  { type = "ptr", name = "192.168.100.3", value = "gs308ep.home.arpa" },
+  { type = "a", name = "ht812.home.arpa", value = "192.168.100.18" },
+  { type = "ptr", name = "192.168.100.18", value = "ht812.home.arpa" },
+  { type = "a", name = "nas.home.arpa", value = "192.168.100.17" },
+  { type = "ptr", name = "192.168.100.17", value = "nas.home.arpa" },
+  { type = "a", name = "npi01.home.arpa", value = "192.168.100.23" },
+  { type = "ptr", name = "192.168.100.23", value = "npi01.home.arpa" },
+  { type = "a", name = "pbx.home.arpa", value = "192.168.100.9" },
+  { type = "a", name = "pi01.home.arpa", value = "192.168.100.9" },
+  { type = "ptr", name = "192.168.100.9", value = "pi01.home.arpa" },
+  { type = "a", name = "pi02.home.arpa", value = "192.168.100.4" },
+  { type = "ptr", name = "192.168.100.4", value = "pi02.home.arpa" },
+  { type = "a", name = "pi03.home.arpa", value = "192.168.100.5" },
+  { type = "ptr", name = "192.168.100.5", value = "pi03.home.arpa" },
+  { type = "a", name = "pi04.home.arpa", value = "192.168.100.6" },
+  { type = "ptr", name = "192.168.100.6", value = "pi04.home.arpa" },
+  { type = "a", name = "rtx830.home.arpa", value = "192.168.100.1" },
+  { type = "ptr", name = "192.168.100.1", value = "rtx830.home.arpa" },
+]
+
+[dns.server_select]
+500000 = "dhcp lan2 any ."

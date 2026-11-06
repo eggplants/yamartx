@@ -1,0 +1,128 @@
+# RTX830 Rev.15.02.33 (Tue Jul 15 12:21:51 2025)
+# MAC Address : 02:00:00:00:00:01, 02:00:00:00:00:02
+# Memory 256Mbytes, 2LAN
+# main:  RTX830 ver=00 serial=X000000000 MAC-Address=02:00:00:00:00:01 MAC-Address=02:00:00:00:00:02
+# Reporting Date: Nov 6 03:29:48 2026
+login password *
+administrator password *
+login user operator *
+user attribute connection=serial,telnet,remote,ssh,sftp,http gui-page=dashboard,lan-map,config login-timer=300
+user attribute operator connection=ssh gui-page=dashboard,lan-map,config login-timer=300
+console character ja.utf8
+ip route default gateway tunnel 1
+ipv6 prefix 1 ra-prefix@lan2::/64
+ip lan1 address 192.168.100.1/24
+ipv6 lan1 address ra-prefix@lan2::1/64
+ipv6 lan1 rtadv send 1 o_flag=off
+description lan2 Smart
+ipv6 lan2 secure filter in 101000 101001 101002 101003
+ipv6 lan2 secure filter out 101099 dynamic 101080 101081 101082 101083 101084 101085 101098 101099
+ipv6 lan2 dhcp service client ir=on
+ngn type lan2 ntt
+tunnel select 1
+ tunnel encapsulation map-e
+ ip tunnel mtu 1460
+ ip tunnel secure filter in 400003 400020 400021 400022 400023 400024 400025 400030 400032
+ ip tunnel secure filter out 400013 400020 400021 400022 400023 400024 400025 400026 400027 400099 dynamic 400080 400081 400082 400083 400084 400085 400098 400099
+ ip tunnel nat descriptor 20000
+ tunnel enable 1
+ip filter 400000 reject 10.0.0.0/8 * * * *
+ip filter 400001 reject 172.16.0.0/12 * * * *
+ip filter 400002 reject 192.168.0.0/16 * * * *
+ip filter 400003 reject 192.168.100.0/24 * * * *
+ip filter 400010 reject * 10.0.0.0/8 * * *
+ip filter 400011 reject * 172.16.0.0/12 * * *
+ip filter 400012 reject * 192.168.0.0/16 * * *
+ip filter 400013 reject * 192.168.100.0/24 * * *
+ip filter 400020 reject * * udp,tcp 135 *
+ip filter 400021 reject * * udp,tcp * 135
+ip filter 400022 reject * * udp,tcp netbios_ns-netbios_ssn *
+ip filter 400023 reject * * udp,tcp * netbios_ns-netbios_ssn
+ip filter 400024 reject * * udp,tcp 445 *
+ip filter 400025 reject * * udp,tcp * 445
+ip filter 400026 restrict * * tcpfin * www,21,nntp
+ip filter 400027 restrict * * tcprst * www,21,nntp
+ip filter 400030 pass * 192.168.100.0/24 icmp * *
+ip filter 400031 pass * 192.168.100.0/24 established * *
+ip filter 400032 pass * 192.168.100.0/24 tcp * ident
+ip filter 400033 pass * 192.168.100.0/24 tcp ftpdata *
+ip filter 400034 pass * 192.168.100.0/24 tcp,udp * domain
+ip filter 400035 pass * 192.168.100.0/24 udp domain *
+ip filter 400036 pass * 192.168.100.0/24 udp * ntp
+ip filter 400037 pass * 192.168.100.0/24 udp ntp *
+ip filter 400099 pass * * * * *
+ip filter 500000 restrict * * * * *
+ip filter dynamic 400080 * * ftp
+ip filter dynamic 400081 * * domain
+ip filter dynamic 400082 * * www
+ip filter dynamic 400083 * * smtp
+ip filter dynamic 400084 * * pop3
+ip filter dynamic 400085 * * submission
+ip filter dynamic 400098 * * tcp
+ip filter dynamic 400099 * * udp
+nat descriptor type 20000 masquerade
+nat descriptor address outer 20000 map-e
+ipv6 filter 101000 pass * * icmp6 * *
+ipv6 filter 101001 pass * * tcp * ident
+ipv6 filter 101002 pass * * udp * 546
+ipv6 filter 101003 pass * * 4
+ipv6 filter 101099 pass * * * * *
+ipv6 filter dynamic 101080 * * ftp
+ipv6 filter dynamic 101081 * * domain
+ipv6 filter dynamic 101082 * * www
+ipv6 filter dynamic 101083 * * smtp
+ipv6 filter dynamic 101084 * * pop3
+ipv6 filter dynamic 101085 * * submission
+ipv6 filter dynamic 101098 * * tcp
+ipv6 filter dynamic 101099 * * udp
+telnetd service off
+telnetd host lan
+dhcp service server
+dhcp server rfc2131 compliant except remain-silent
+dhcp scope 1 192.168.100.2-192.168.100.191/24
+dhcp scope bind 1 192.168.100.2 ethernet 02:00:00:00:00:11
+dhcp scope bind 1 192.168.100.3 ethernet 02:00:00:00:00:12
+dhcp scope bind 1 192.168.100.4 ethernet 02:00:00:00:00:13
+dhcp scope bind 1 192.168.100.5 ethernet 02:00:00:00:00:14
+dhcp scope bind 1 192.168.100.6 ethernet 02:00:00:00:00:15
+dhcp scope bind 1 192.168.100.7 ethernet 02:00:00:00:00:16
+dhcp scope bind 1 192.168.100.9 ethernet 02:00:00:00:00:17
+dhcp scope bind 1 192.168.100.17 ethernet 02:00:00:00:00:18
+dhcp scope bind 1 192.168.100.18 ethernet 02:00:00:00:00:19
+dhcp scope bind 1 192.168.100.23 ethernet 02:00:00:00:00:1a
+dhcp scope option 1 dns=192.168.100.4,192.168.100.5
+dns host lan1
+dns service fallback on
+dns server dhcp lan2
+dns server select 500000 dhcp lan2 any .
+dns private address spoof on
+dns static a adguard.home.arpa 192.168.100.4
+dns static a gr12.home.arpa 192.168.100.7
+dns static ptr 192.168.100.7 gr12.home.arpa
+dns static a grafana.home.arpa 192.168.100.4
+dns static a gs110.home.arpa 192.168.100.2
+dns static ptr 192.168.100.2 gs110.home.arpa
+dns static a gs308ep.home.arpa 192.168.100.3
+dns static ptr 192.168.100.3 gs308ep.home.arpa
+dns static a ht812.home.arpa 192.168.100.18
+dns static ptr 192.168.100.18 ht812.home.arpa
+dns static a nas.home.arpa 192.168.100.17
+dns static ptr 192.168.100.17 nas.home.arpa
+dns static a npi01.home.arpa 192.168.100.23
+dns static ptr 192.168.100.23 npi01.home.arpa
+dns static a pbx.home.arpa 192.168.100.9
+dns static a pi01.home.arpa 192.168.100.9
+dns static ptr 192.168.100.9 pi01.home.arpa
+dns static a pi02.home.arpa 192.168.100.4
+dns static ptr 192.168.100.4 pi02.home.arpa
+dns static a pi03.home.arpa 192.168.100.5
+dns static ptr 192.168.100.5 pi03.home.arpa
+dns static a pi04.home.arpa 192.168.100.6
+dns static ptr 192.168.100.6 pi04.home.arpa
+dns static a rtx830.home.arpa 192.168.100.1
+dns static ptr 192.168.100.1 rtx830.home.arpa
+httpd host lan1
+sshd service on
+sshd host lan1
+sshd host key generate *
+statistics traffic on
