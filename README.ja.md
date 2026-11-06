@@ -40,6 +40,9 @@ yamartx apply
 
 # 設定ファイルが表すコマンドを表示する
 yamartx render
+
+# ルーターの show config の内容をそのまま出力する (管理パスワードは不要)
+yamartx show
 ```
 
 `plan` の出力例:

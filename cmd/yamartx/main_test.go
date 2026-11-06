@@ -364,6 +364,78 @@ func TestUnexpectedShowConfigOutputIsRejected(t *testing.T) {
 	}
 }
 
+func TestShowPrintsConfigAsIs(t *testing.T) {
+	// Longer than any console width the router would otherwise wrap at.
+	longLine := "ipv6 lan2 secure filter in" + strings.Repeat(" 101000", 40) + "\n"
+	want := strings.Replace(smallConfig, "ip lan1 address", "console lines 50\nip lan1 address", 1) + longLine
+	s := startRouter(t, want)
+	// Login privileges are enough, as in a task that only has an SSH key.
+	t.Setenv("YAMARTX_ADMIN_PASSWORD", "")
+	os.Unsetenv("YAMARTX_ADMIN_PASSWORD")
+
+	r := exec("", append([]string{"show"}, connArgs(s)...)...)
+	if r.err != nil || r.code != 0 {
+		t.Fatalf("show: %+v", r)
+	}
+	if r.stdout != want {
+		t.Errorf("stdout:\n%s\nwant:\n%s", r.stdout, want)
+	}
+	if slices.Contains(s.Commands(), "administrator") || slices.Contains(s.Commands(), "save") {
+		t.Errorf("commands = %v", s.Commands())
+	}
+	lines := s.Lines()
+	if !hasLine(lines, "", "console lines 50") || hasLine(lines, "", "console columns 4096") {
+		t.Errorf("console settings not restored: %v", lines)
+	}
+}
+
+func TestShowOutputWorksWithPlanFromFile(t *testing.T) {
+	s := startRouter(t, smallConfig)
+	path := importConfig(t, s)
+
+	r := exec("", "show", "-c", path)
+	if r.err != nil {
+		t.Fatalf("show: %+v", r)
+	}
+	saved := filepath.Join(t.TempDir(), "show-config.txt")
+	if err := os.WriteFile(saved, []byte(r.stdout), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r = exec("", "plan", "-c", path, "-from-file", saved, "-detailed-exitcode")
+	if r.err != nil || r.code != 0 || !strings.Contains(r.stdout, "No changes.") {
+		t.Fatalf("plan: %+v", r)
+	}
+}
+
+func TestShowFailures(t *testing.T) {
+	s := startRouter(t, smallConfig)
+
+	t.Run("unexpected output prints nothing", func(t *testing.T) {
+		s.ShowConfigOutput = "Access denied\n"
+		defer func() { s.ShowConfigOutput = "" }()
+		r := exec("", append([]string{"show"}, connArgs(s)...)...)
+		if r.code != 1 || r.err == nil || r.stdout != "" {
+			t.Fatalf("show: %+v", r)
+		}
+		if hasLine(s.Lines(), "", "console lines infinity") {
+			t.Error("console settings were not restored after the failure")
+		}
+	})
+	t.Run("no connection settings", func(t *testing.T) {
+		r := exec("", "show")
+		if r.code != 1 || r.err == nil || !strings.Contains(r.err.Error(), "host and user") {
+			t.Fatalf("show: %+v", r)
+		}
+	})
+	t.Run("explicit config file must exist", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "missing.toml")
+		r := exec("", append([]string{"show", "-c", missing}, connArgs(s)...)...)
+		if r.code != 1 || r.err == nil || !strings.Contains(r.err.Error(), "missing.toml") {
+			t.Fatalf("show: %+v", r)
+		}
+	})
+}
+
 func TestOfflineFromFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "router.toml")
 	source := "../../testdata/show-config.txt"

@@ -40,6 +40,9 @@ yamartx apply
 
 # Print the commands the configuration file describes
 yamartx render
+
+# Print the router's show config output as is (needs no administrator password)
+yamartx show
 ```
 
 Example `plan` output:

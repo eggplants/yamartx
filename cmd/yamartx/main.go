@@ -32,6 +32,7 @@ Commands:
   plan     Show what apply would change
   apply    Change the router to match the TOML file, then save
   render   Print the commands the TOML file describes (offline)
+  show     Print the router's show config output
   version  Show version and exit
 
 Run "yamartx <command> -h" for the options of a command.
@@ -79,6 +80,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) (int, error) 
 		return a.runApply(args[1:])
 	case "render":
 		return a.runRender(args[1:])
+	case "show":
+		return a.runShow(args[1:])
 	case "version", "-v", "--version":
 		fmt.Fprintln(stdout, "yamartx", getVersion())
 		return 0, nil
@@ -230,6 +233,39 @@ func (a *app) runRender(args []string) (int, error) {
 		fmt.Fprintln(a.stdout, line.Text)
 	}
 	return 0, nil
+}
+
+func (a *app) runShow(args []string) (int, error) {
+	fs := newFlagSet("show", a.stderr)
+	path := fs.String("c", defaultConfigPath, "TOML config file with the connection settings")
+	conn := addConnFlags(fs)
+	if done, code, err := parseFlags(fs, args); done {
+		return code, err
+	}
+
+	// Only [connection] is needed, so the default file may be absent when flags give the target.
+	var connection config.Connection
+	cfg, err := config.Load(*path)
+	switch {
+	case err == nil:
+		connection = cfg.Connection
+	case !errors.Is(err, os.ErrNotExist) || *path != defaultConfigPath:
+		return 1, err
+	}
+	conn.merge(&connection)
+
+	s, err := a.dial(connection)
+	if err != nil {
+		return 1, err
+	}
+	defer s.Close()
+	// Unlike plan and apply, this needs no administrator password: login privileges can read show config.
+	text, err := s.ShowConfig()
+	if err != nil {
+		return 1, err
+	}
+	_, err = fmt.Fprintln(a.stdout, text)
+	return boolCode(err), err
 }
 
 func (a *app) runPlan(args []string) (int, error) {
